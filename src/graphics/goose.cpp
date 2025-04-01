@@ -32,13 +32,14 @@ inline void fillCircleFromCenter(QPainter *painter, const QPointF &center,
 }
 
 inline void fillEllipseFromCenter(QPainter *painter, const QPointF &center,
-                                  int width, int height, const QBrush &brush) {
+                                  int xRadius, int yRadius,
+                                  const QBrush &brush) {
   painter->save();
   painter->setBrush(brush);
   painter->setPen(Qt::NoPen);
 
-  painter->drawEllipse(QRectF(center.x() - width / 2.0,
-                              center.y() - height / 2.0, width, height));
+  painter->drawEllipse(QRectF(center.x() - xRadius, center.y() - yRadius,
+                              xRadius * 2, yRadius * 2));
   painter->restore();
 }
 
@@ -59,8 +60,7 @@ goose::goose() {
 }
 
 void goose::updateRig(float currentTime) {
-  QPointF a(static_cast<float>(static_cast<int>(position.x())),
-            static_cast<float>(static_cast<int>(position.y())));
+  QPointF a(position.x(), position.y());
   QPointF b(1.3f, 0.4f);
   QPointF fromAngle = getFromAngleDegrees(direction);
 
