@@ -4,15 +4,18 @@
 #include "goose/mainloop.hpp"
 #include "graphics/goose.hpp"
 #include "tasks/task.hpp"
+#include <qpoint.h>
 
 class wander : public task {
 public:
-  wander(mainloop *app);
-  wander(mainloop *app, goose *gooe);
-  task &tick(float currentTime) override;
+  wander(mainloop *ml);
+  bool tick(float currentTime) override;
 
 private:
+  QPointF getBudgetTarget(float currentTime);
+  float endTime, pauseEnd;
   goose *gooe;
+  mainloop *ml;
 };
 
 #endif

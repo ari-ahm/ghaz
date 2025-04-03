@@ -3,7 +3,7 @@
 
 class task {
 public:
-  virtual task &tick(float currentTime) = 0;
+  virtual bool tick(float currentTime) = 0;
 };
 
 #endif

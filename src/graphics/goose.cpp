@@ -1,39 +1,32 @@
 #include "goose.hpp"
+#include "utils/math.hpp"
 #include <QBrush>
 #include <QColor>
 #include <QPainter>
 #include <QPen>
 #include <QPointF>
 #include <QVector>
+#include <cmath>
+#include <qbrush.h>
+#include <qcolor.h>
 #include <qeasingcurve.h>
+#include <qlogging.h>
+#include <qpainter.h>
 #include <qpoint.h>
 #include <qvector2d.h>
 
-inline QPointF getFromAngleDegrees(float angleDegrees) {
-  float rad = qDegreesToRadians(angleDegrees);
-  return QPointF(qCos(rad), qSin(rad));
-}
-
-inline float lerp(float start, float end, float t) {
-  return start + t * (end - start);
-}
-
-inline QPoint toIntPoint(const QPointF &pt) {
-  return QPoint(qRound(pt.x()), qRound(pt.y()));
-}
-
-inline void fillCircleFromCenter(QPainter *painter, const QPointF &center,
-                                 int radius, const QColor &color) {
+inline void fillCircleFromCenter(QPainter *painter, const QBrush &brush,
+                                 const QPointF &center, int radius) {
   painter->save();
-  painter->setBrush(QBrush(color));
+  painter->setBrush(brush);
   painter->setPen(Qt::NoPen);
   painter->drawEllipse(center, radius, radius);
   painter->restore();
 }
 
-inline void fillEllipseFromCenter(QPainter *painter, const QPointF &center,
-                                  int xRadius, int yRadius,
-                                  const QBrush &brush) {
+inline void fillEllipseFromCenter(QPainter *painter, const QBrush &brush,
+                                  const QPointF &center, int xRadius,
+                                  int yRadius) {
   painter->save();
   painter->setBrush(brush);
   painter->setPen(Qt::NoPen);
@@ -62,192 +55,216 @@ goose::goose() {
 void goose::updateRig(float currentTime) {
   QPointF a(position.x(), position.y());
   QPointF b(1.3f, 0.4f);
-  QPointF fromAngle = getFromAngleDegrees(direction);
+  QPointF fromAngle = normal(direction);
 
   QPointF a2(0.0f, -1.0f);
 
   gooseRig.underbodyCenter = a + a2 * 9.0f;
   gooseRig.bodyCenter = a + a2 * 14.0f;
 
-  int num4 = static_cast<int>(lerp(20.0f, 10.0f, gooseRig.neckLerpPercent));
-  int num5 = static_cast<int>(lerp(3.0f, 16.0f, gooseRig.neckLerpPercent));
+  int num4 = lerp(20.0f, 10.0f, gooseRig.neckLerpPercent);
+  int num5 = lerp(3.0f, 16.0f, gooseRig.neckLerpPercent);
 
   gooseRig.neckCenter = a + a2 * (14.0f + num4);
   gooseRig.neckBase = gooseRig.bodyCenter + fromAngle * 15.0f;
-  gooseRig.neckHeadPoint = gooseRig.neckBase +
-                           fromAngle * static_cast<float>(num5) +
-                           a2 * static_cast<float>(num4);
+  gooseRig.neckHeadPoint = gooseRig.neckBase + fromAngle * num5 + a2 * num4;
   gooseRig.head1EndPoint =
       gooseRig.neckHeadPoint + fromAngle * 3.0f - a2 * 1.0f;
   gooseRig.head2EndPoint = gooseRig.head1EndPoint + fromAngle * 5.0f;
 
+  gooseRig.neckLerpPercent =
+      lerp(gooseRig.neckLerpPercent, (extendingNeck || norm(velocity) >= 200),
+           0.075);
+
   solveFeet(currentTime);
 }
 
-QPointF goose::getFootHome(bool isRight) {
-  return position + getFromAngleDegrees(direction + 90) * 6 * (isRight ? 1 : 0);
-}
-
 void goose::solveFeet(float currentTime) {
-  QPointF footHomeLeft = getFootHome(false);
-  QPointF footHomeRight = getFootHome(true);
+  QPointF lfootTarget = position;
+  QPointF rfootTarget = position + normal(direction + M_PI_2) * 6;
 
-  auto distance = [](const QPointF &p1, const QPointF &p2) {
-    return QVector2D(p2 - p1).length();
-  };
+  if (gooseRig.lFootTime < 0 && gooseRig.rFootTime < 0) {
+    float lfootDist = norm(gooseRig.lFootPos - lfootTarget);
+    float rfootDist = norm(gooseRig.rFootPos - rfootTarget);
 
-  if (gooseRig.lFootTime < 0.0f && gooseRig.rFootTime < 0.0f) {
-    if (distance(gooseRig.lFootPos, footHomeLeft) > 5.0f) {
+    if (lfootDist > rfootDist && lfootDist > 5) {
       gooseRig.lFootOrig = gooseRig.lFootPos;
-      gooseRig.lFootDir =
-          QVector2D(footHomeLeft - gooseRig.lFootPos).normalized();
+      gooseRig.lFootDir = normalized(lfootTarget - gooseRig.lFootPos);
       gooseRig.lFootTime = currentTime;
-      return;
-    }
-    if (distance(gooseRig.rFootPos, footHomeRight) > 5.0f) {
+    } else if (rfootDist > 5) {
       gooseRig.rFootOrig = gooseRig.rFootPos;
-      gooseRig.rFootDir =
-          QVector2D(footHomeRight - gooseRig.rFootPos).normalized();
+      gooseRig.rFootDir = normalized(rfootTarget - gooseRig.rFootPos);
       gooseRig.rFootTime = currentTime;
-      return;
+    }
+  } else if (gooseRig.lFootTime >= 0) {
+    QPointF diff = lfootTarget + gooseRig.lFootDir * 2;
+    if (currentTime > gooseRig.lFootTime + stepTime) {
+      gooseRig.lFootPos = diff;
+      gooseRig.lFootTime = -1;
+    } else {
+      gooseRig.lFootPos =
+          lerp(gooseRig.lFootOrig, diff,
+               cubicEaseInOut((currentTime - gooseRig.lFootTime) / stepTime));
     }
   } else {
-    QEasingCurve easingCurve(QEasingCurve::InOutCubic);
-
-    if (gooseRig.lFootTime > 0.0f) {
-      float progress = (currentTime - gooseRig.lFootTime) / stepTime;
-      if (progress < 1.0f) {
-        float easedProgress = easingCurve.valueForProgress(progress);
-        gooseRig.lFootPos =
-            gooseRig.lFootOrig + gooseRig.lFootDir.toPointF() * easedProgress *
-                                     distance(gooseRig.lFootOrig, footHomeLeft);
-        gooseRig.lFootPos.setY(gooseRig.lFootPos.y() -
-                               footLiftHeight * sin(easedProgress * M_PI));
-      } else {
-        gooseRig.lFootPos = footHomeLeft;
-        gooseRig.lFootTime = -1.0f;
-        /*playFootstepSound();*/
-        /*addFootMark(lFootPos);*/
-      }
+    QPointF diff = rfootTarget + gooseRig.rFootDir * 2;
+    if (currentTime > gooseRig.rFootTime + stepTime) {
+      gooseRig.rFootPos = diff;
+      gooseRig.rFootTime = -1;
     } else {
-      float progress = (currentTime - gooseRig.rFootTime) / stepTime;
-      if (progress < 1.0f) {
-        float easedProgress = easingCurve.valueForProgress(progress);
-        gooseRig.rFootPos = gooseRig.rFootOrig +
-                            gooseRig.rFootDir.toPointF() * easedProgress *
-                                distance(gooseRig.rFootOrig, footHomeRight);
-        gooseRig.rFootPos.setY(gooseRig.rFootPos.y() -
-                               footLiftHeight * sin(easedProgress * M_PI));
-      } else {
-        gooseRig.rFootPos = footHomeRight;
-        gooseRig.rFootTime = -1.0f;
-        /*playFootstepSound();*/
-        /*addFootMark(rFootPos);*/
-      }
+      gooseRig.rFootPos =
+          lerp(gooseRig.rFootOrig, diff,
+               cubicEaseInOut((currentTime - gooseRig.rFootTime) / stepTime));
     }
   }
 }
 
-bool goose::draw(QPainter *painter, float currentTime) {
-  for (int i = 0; i < footMarks.size(); ++i) {
-    if (footMarks[i].time != 0.0f) {
-      float tOffset = footMarks[i].time + 8.5f;
+void goose::drawRig(QPainter *painter) {
+  auto multiplyScalar = [](const QPointF &pt, float scalar) -> QPointF {
+    return QPointF(pt.x() * scalar, pt.y() * scalar);
+  };
 
-      float delta = qBound(0.0f, currentTime - tOffset, 1.0f);
+  auto multiplyPoint = [](const QPointF &a, const QPointF &b) -> QPointF {
+    return QPointF(a.x() * b.x(), a.y() * b.y());
+  };
 
-      float radius = 3.0f + delta * (0.0f - 3.0f);
-      fillCircleFromCenter(painter, footMarks[i].position,
-                           static_cast<int>(radius), QColor(139, 69, 19));
-    }
+  QPointF vector2(1.3, 0.4);
+  QPointF forward = normal(direction);
+  QPointF right = normal(direction + M_PI_2);
+  QPointF vecUp(0, -1);
+
+  int num5 = 2;
+
+  QBrush brushGooseWhite(Qt::white);
+  QBrush brushGooseOrange(QColor(255, 165, 0));
+  QColor gooseOutlineColor(QColor(211, 211, 211));
+
+  QPen pen = drawingPen;
+  pen.setColor(brushGooseWhite.color());
+  painter->setPen(pen);
+
+  fillCircleFromCenter(painter, brushGooseOrange, gooseRig.lFootPos, 4);
+  fillCircleFromCenter(painter, brushGooseOrange, gooseRig.rFootPos, 4);
+
+  fillEllipseFromCenter(painter, shadowBrush, position, 20, 15);
+
+  pen.setColor(gooseOutlineColor);
+  pen.setWidth(22 + num5);
+  painter->setPen(pen);
+  QPointF bodyLineStart = gooseRig.bodyCenter + multiplyScalar(forward, 11);
+  QPointF bodyLineEnd = gooseRig.bodyCenter - multiplyScalar(forward, 11);
+  painter->drawLine(bodyLineStart, bodyLineEnd);
+
+  pen.setWidth(13 + num5);
+  painter->setPen(pen);
+  painter->drawLine(gooseRig.neckBase, gooseRig.neckHeadPoint);
+
+  pen.setWidth(15 + num5);
+  painter->setPen(pen);
+  painter->drawLine(gooseRig.neckHeadPoint, gooseRig.head1EndPoint);
+
+  pen.setWidth(10 + num5);
+  painter->setPen(pen);
+  painter->drawLine(gooseRig.head1EndPoint, gooseRig.head2EndPoint);
+
+  pen.setWidth(15);
+  painter->setPen(pen);
+  QPointF underbodyStart =
+      gooseRig.underbodyCenter + multiplyScalar(forward, 7);
+  QPointF underbodyEnd = gooseRig.underbodyCenter - multiplyScalar(forward, 7);
+  painter->drawLine(underbodyStart, underbodyEnd);
+
+  pen.setColor(brushGooseWhite.color());
+  pen.setWidth(22);
+  painter->setPen(pen);
+  bodyLineStart = gooseRig.bodyCenter + multiplyScalar(forward, 11);
+  bodyLineEnd = gooseRig.bodyCenter - multiplyScalar(forward, 11);
+  painter->drawLine(bodyLineStart, bodyLineEnd);
+
+  pen.setWidth(13);
+  painter->setPen(pen);
+  painter->drawLine(gooseRig.neckBase, gooseRig.neckHeadPoint);
+
+  pen.setWidth(15);
+  painter->setPen(pen);
+  painter->drawLine(gooseRig.neckHeadPoint, gooseRig.head1EndPoint);
+
+  pen.setWidth(10);
+  painter->setPen(pen);
+  painter->drawLine(gooseRig.head1EndPoint, gooseRig.head2EndPoint);
+
+  int num6 = 9;
+  int num7 = 3;
+  pen.setWidth(num6);
+  pen.setColor(brushGooseOrange.color());
+  painter->setPen(pen);
+  QPointF headTip = gooseRig.head2EndPoint + multiplyScalar(forward, num7);
+  painter->drawLine(gooseRig.head2EndPoint, headTip);
+
+  QPointF rightScaled = multiplyPoint(right, vector2);
+  QPointF pos1 = gooseRig.neckHeadPoint + multiplyScalar(vecUp, 3) -
+                 multiplyScalar(rightScaled, 5) + multiplyScalar(forward, 5);
+  QPointF pos2 = gooseRig.neckHeadPoint + multiplyScalar(vecUp, 3) +
+                 multiplyScalar(rightScaled, 5) + multiplyScalar(forward, 5);
+
+  fillCircleFromCenter(painter, QBrush(Qt::black), pos1, 2);
+  fillCircleFromCenter(painter, QBrush(Qt::black), pos2, 2);
+}
+
+void goose::updatePos(float currentTime) {
+  float timeDelta = currentTime - lastUpdate;
+  lastUpdate = currentTime;
+  float targetAngle = angle(target - position);
+  if (abs(direction - targetAngle) > abs(direction - targetAngle - 2 * M_PI))
+    direction -= 2 * M_PI;
+  if (abs(direction - targetAngle) > abs(direction - targetAngle + 2 * M_PI))
+    direction += 2 * M_PI;
+  direction = lerp(direction, angle(target - position), 0.25);
+  float speed = norm(velocity);
+  velocity *= std::min(topSpeed, speed) / (speed < 1e-3 ? 1 : speed);
+  velocity += normalized(target - position) * acceleration * timeDelta /
+              2; // TODO implement sudden stop
+  position += velocity * timeDelta / 2;
+}
+
+void goose::setSpeed(speedTier tier) {
+  speed = tier;
+  switch (tier) {
+  case walking:
+    topSpeed = 80;
+    acceleration = 1300;
+    stepTime = 0.2;
+    break;
+  case running:
+    topSpeed = 200;
+    acceleration = 1300;
+    stepTime = 0.2;
+    break;
+  case charging:
+    topSpeed = 400;
+    acceleration = 2300;
+    stepTime = 0.1;
+    break;
+  case stopped:
+  default:
+    topSpeed = 0;
+    acceleration = 0;
+    stepTime = 0.2;
   }
+}
 
+void goose::setTarget(QPointF target) { this->target = target; }
+
+QPointF goose::getPosition() { return position; }
+
+QPointF goose::getTarget() { return target; }
+
+float goose::getTopSpeed() { return topSpeed; }
+
+bool goose::draw(QPainter *painter, float currentTime) {
+  updatePos(currentTime);
   updateRig(currentTime);
-
-  float angle = direction;
-  QPointF posInt(qRound(position.x()), qRound(position.y()));
-  QPointF b(1.3, 0.4);
-  QPointF fromAngle = getFromAngleDegrees(angle);
-  fromAngle.setX(fromAngle.x() * b.x());
-  fromAngle.setY(fromAngle.y() * b.y());
-  QPointF fromAngle90 = getFromAngleDegrees(angle + 90);
-  fromAngle90.setX(fromAngle90.x() * b.x());
-  fromAngle90.setY(fromAngle90.y() * b.y());
-  QPointF a(0, -1);
-
-  drawingPen.setColor(Qt::white);
-
-  fillCircleFromCenter(painter, gooseRig.lFootPos, 4, Qt::darkYellow);
-  fillCircleFromCenter(painter, gooseRig.rFootPos, 4, Qt::darkYellow);
-
-  fillEllipseFromCenter(painter, posInt, 20, 15, shadowBrush);
-
-  drawingPen.setColor(Qt::lightGray);
-  drawingPen.setWidthF(24.0);
-  painter->setPen(drawingPen);
-  painter->drawLine(toIntPoint(gooseRig.bodyCenter + fromAngle * 11.0),
-                    toIntPoint(gooseRig.bodyCenter - fromAngle * 11.0));
-
-  drawingPen.setWidthF(15.0);
-  painter->setPen(drawingPen);
-  painter->drawLine(toIntPoint(gooseRig.neckBase),
-                    toIntPoint(gooseRig.neckHeadPoint));
-
-  drawingPen.setWidthF(17.0);
-  painter->setPen(drawingPen);
-  painter->drawLine(toIntPoint(gooseRig.neckHeadPoint),
-                    toIntPoint(gooseRig.head1EndPoint));
-
-  drawingPen.setWidthF(12.0);
-  painter->setPen(drawingPen);
-  painter->drawLine(toIntPoint(gooseRig.head1EndPoint),
-                    toIntPoint(gooseRig.head2EndPoint));
-
-  drawingPen.setColor(Qt::lightGray);
-  drawingPen.setWidthF(15.0);
-  painter->setPen(drawingPen);
-  painter->drawLine(toIntPoint(gooseRig.underbodyCenter + fromAngle * 7.0),
-                    toIntPoint(gooseRig.underbodyCenter - fromAngle * 7.0));
-
-  drawingPen.setColor(Qt::white);
-  drawingPen.setWidthF(22.0);
-  painter->setPen(drawingPen);
-  painter->drawLine(toIntPoint(gooseRig.bodyCenter + fromAngle * 11.0),
-                    toIntPoint(gooseRig.bodyCenter - fromAngle * 11.0));
-
-  drawingPen.setWidthF(13.0);
-  painter->setPen(drawingPen);
-  painter->drawLine(toIntPoint(gooseRig.neckBase),
-                    toIntPoint(gooseRig.neckHeadPoint));
-
-  drawingPen.setWidthF(15.0);
-  painter->setPen(drawingPen);
-  painter->drawLine(toIntPoint(gooseRig.neckHeadPoint),
-                    toIntPoint(gooseRig.head1EndPoint));
-
-  drawingPen.setWidthF(10.0);
-  painter->setPen(drawingPen);
-  painter->drawLine(toIntPoint(gooseRig.head1EndPoint),
-                    toIntPoint(gooseRig.head2EndPoint));
-
-  drawingPen.setWidthF(9.0);
-  QColor orangeColor(255, 165, 0);
-  drawingPen.setColor(orangeColor);
-  painter->setPen(drawingPen);
-  QPointF vector2 = gooseRig.head2EndPoint + fromAngle * 3.0;
-  painter->drawLine(toIntPoint(gooseRig.head2EndPoint), toIntPoint(vector2));
-
-  QPointF scaledFromAngle90(fromAngle90.x() * b.x(), fromAngle90.y() * b.y());
-  QPointF pos = gooseRig.neckHeadPoint + a * 3.0 - scaledFromAngle90 * 5.0 +
-                fromAngle * 5.0;
-  QPointF pos2 = gooseRig.neckHeadPoint + a * 3.0 + scaledFromAngle90 * 5.0 +
-                 fromAngle * 5.0;
-  fillCircleFromCenter(painter, pos, 2, Qt::black);
-  fillCircleFromCenter(painter, pos2, 2, Qt::black);
+  drawRig(painter);
 
   return false;
 }
-
-void goose::setDirection(float direction) { this->direction = direction; }
-void goose::setPosition(QPointF position) { this->position = position; }
-float goose::getDirection() { return direction; }
-QPointF goose::getPosition() { return position; }
