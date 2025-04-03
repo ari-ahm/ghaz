@@ -27,7 +27,7 @@ private:
     QPointF neckHeadPoint;
     QPointF head1EndPoint;
     QPointF head2EndPoint;
-    float neckLerpPercent;
+    float neckLerpPercent = 0;
     QPointF lFootPos, lFootOrig;
     QPointF rFootPos, rFootOrig;
     float lFootTime = -1, rFootTime = -1;

@@ -4,6 +4,7 @@
 #include "goose/taskdb.hpp"
 #include "graphics/graphic.hpp"
 #include "tasks/task.hpp"
+#include <QOpenGLWidget>
 #include <QStack>
 #include <QTimer>
 #include <QWidget>
@@ -14,7 +15,7 @@
 #include <qwidget.h>
 #include <set>
 
-class mainloop : public QWidget {
+class mainloop : public QOpenGLWidget {
   Q_OBJECT
 public:
   explicit mainloop(QWidget *parent = nullptr);
@@ -24,7 +25,7 @@ public:
   float getCurrentTime();
 
 protected:
-  void paintEvent(QPaintEvent *event) override;
+  void paintGL() override;
 private slots:
   void onUpdate();
 

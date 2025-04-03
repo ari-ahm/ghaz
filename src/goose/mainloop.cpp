@@ -2,6 +2,7 @@
 #include "graphics/goose.hpp"
 #include "graphics/graphic.hpp"
 #include "tasks/wander.hpp"
+#include <GL/gl.h>
 #include <QScreen>
 #include <cmath>
 #include <qcursor.h>
@@ -10,7 +11,7 @@
 #include <qpoint.h>
 #include <qset.h>
 
-mainloop::mainloop(QWidget *parent) : QWidget(parent) {
+mainloop::mainloop(QWidget *parent) : QOpenGLWidget(parent) {
   registerGraphics(new goose(), "goose");
   (dynamic_cast<goose *>(getGraphic("goose")))->setSpeed(goose::stopped);
 
@@ -47,8 +48,8 @@ float mainloop::getCurrentTime() { return epochTime.elapsed() / 1000.0f; }
 
 graphic *mainloop::getGraphic(std::string name) { return namedGraphics[name]; }
 
-void mainloop::paintEvent(QPaintEvent *event) {
-  Q_UNUSED(event);
+void mainloop::paintGL() {
+  glClear(GL_COLOR_BUFFER_BIT);
   QPainter painter(this);
 
   // painter.fillRect(rect(), Qt::black);

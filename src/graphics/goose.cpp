@@ -248,7 +248,7 @@ void goose::setSpeed(speedTier tier) {
   case stopped:
   default:
     topSpeed = 0;
-    acceleration = 0;
+    acceleration = 1300;
     stepTime = 0.2;
   }
 }

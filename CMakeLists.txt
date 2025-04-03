@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find the required Qt packages
-find_package(Qt6 REQUIRED COMPONENTS Widgets DBus)
+find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGLWidgets)
 
 
 # Enable automatic MOC, UIC, and RCC
@@ -26,7 +26,7 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAK
 add_executable(dgport ${SOURCES})
 
 # Link the Qt libraries
-target_link_libraries(dgport PRIVATE Qt6::Widgets Qt6::DBus)
+target_link_libraries(dgport PRIVATE Qt6::Widgets Qt6::OpenGLWidgets)
 
 # Specify the include directories
 target_include_directories(dgport PRIVATE ${CMAKE_SOURCE_DIR}/src)

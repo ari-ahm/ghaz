@@ -5,7 +5,7 @@
 
 runMouse::runMouse(mainloop *app)
     : gooe(dynamic_cast<goose *>(app->getGraphic("goose"))) {
-  gooe->setSpeed(goose::walking);
+  gooe->setSpeed(goose::running);
 }
 
 bool runMouse::tick(float currentTime) {
