@@ -221,9 +221,9 @@ void goose::updatePos(float currentTime) {
     direction += 2 * M_PI;
   direction = lerp(direction, angle(target - position), 0.25);
   float speed = norm(velocity);
-  velocity *= std::min(topSpeed, speed) / (speed < 1e-3 ? 1 : speed);
-  velocity += normalized(target - position) * acceleration * timeDelta /
-              2; // TODO implement sudden stop
+  velocity -= (speed > topSpeed ? 1 : 0) * normalized(velocity) * acceleration *
+              timeDelta;
+  velocity += normalized(target - position) * acceleration * timeDelta / 2;
   position += velocity * timeDelta / 2;
 }
 
@@ -268,3 +268,5 @@ bool goose::draw(QPainter *painter, float currentTime) {
 
   return false;
 }
+
+QPointF goose::getBeakPos() { return gooseRig.head2EndPoint; }

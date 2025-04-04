@@ -1,6 +1,7 @@
 #include "mainloop.hpp"
 #include "graphics/goose.hpp"
 #include "graphics/graphic.hpp"
+#include "tasks/nabMouse.hpp"
 #include "tasks/wander.hpp"
 #include <GL/gl.h>
 #include <QScreen>
@@ -16,6 +17,7 @@ mainloop::mainloop(QWidget *parent) : QOpenGLWidget(parent) {
   (dynamic_cast<goose *>(getGraphic("goose")))->setSpeed(goose::stopped);
 
   myTaskdb.addTask([this]() { return new wander(this); });
+  myTaskdb.addTask([this]() { return new nabMouse(this); });
 
   int h = this->screen()->size().height();
   int w = this->screen()->size().width();

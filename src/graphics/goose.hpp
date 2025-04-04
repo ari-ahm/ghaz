@@ -17,6 +17,7 @@ public:
   QPointF getTarget();
   QPointF getPosition();
   float getTopSpeed();
+  QPointF getBeakPos();
 
 private:
   struct GooseRig {
