@@ -16,7 +16,7 @@ bool nabMouse::tick(float currentTime) {
     gooe->setTarget(target);
 
     if (norm(target - gooe->getPosition()) < 15) {
-      target = getTarget();
+      this->target = getTarget();
       stage = 1;
       stageStartTime = currentTime;
     }
