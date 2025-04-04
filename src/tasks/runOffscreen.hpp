@@ -1,22 +1,22 @@
-#ifndef WANDER_HPP
-#define WANDER_HPP
+#ifndef RUNOFFSCREEN_HPP
+#define RUNOFFSCREEN_HPP
 
 #include "goose/mainloop.hpp"
 #include "graphics/goose.hpp"
 #include "tasks/task.hpp"
 #include <qpoint.h>
 
-class wander : public task {
+class runOffscreen : public task {
 public:
-  wander(mainloop *ml);
+  runOffscreen(mainloop *ml);
   bool tick(float currentTime) override;
 
 private:
-  QPointF getBudgetTarget(float currentTime);
-  float endTime, pauseEnd;
-  goose *gooe;
   mainloop *ml;
+  goose *gooe;
   QPointF target;
+
+  QPointF getTarget();
 };
 
 #endif

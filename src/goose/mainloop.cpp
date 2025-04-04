@@ -2,6 +2,7 @@
 #include "graphics/goose.hpp"
 #include "graphics/graphic.hpp"
 #include "tasks/nabMouse.hpp"
+#include "tasks/runOffscreen.hpp"
 #include "tasks/wander.hpp"
 #include <GL/gl.h>
 #include <QScreen>

@@ -6,24 +6,25 @@
 
 nabMouse::nabMouse(mainloop *ml)
     : ml(ml), gooe(dynamic_cast<goose *>(ml->getGraphic("goose"))),
-      stageStartTime(ml->getCurrentTime()), stage(0) {
-  gooe->setSpeed(goose::charging);
-}
+      stageStartTime(ml->getCurrentTime()), stage(0) {}
 
 bool nabMouse::tick(float currentTime) {
   if (stage == 0) { // charge towards mouse
+    gooe->setSpeed(goose::charging);
     QPointF target =
         cursor::getPos() + gooe->getPosition() - gooe->getBeakPos();
     gooe->setTarget(target);
 
     if (norm(target - gooe->getPosition()) < 15) {
-      gooe->setTarget(getTarget());
+      target = getTarget();
       stage = 1;
       stageStartTime = currentTime;
     }
 
     return currentTime > stageStartTime + 9;
   } else if (stage == 1) {
+    gooe->setTarget(target);
+    gooe->setSpeed(goose::charging);
     cursor::setPos(gooe->getBeakPos());
     return norm(gooe->getPosition() - gooe->getTarget()) < 30;
   }

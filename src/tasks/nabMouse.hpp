@@ -16,6 +16,7 @@ private:
   goose *gooe;
   int stage = 0;
   float stageStartTime;
+  QPointF target;
 
   QPointF getTarget();
 };
