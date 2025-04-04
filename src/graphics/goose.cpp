@@ -232,8 +232,8 @@ void goose::updatePos(float currentTime) {
   float timeDelta = currentTime - lastUpdate;
   lastUpdate = currentTime;
   float speed = norm(velocity);
-  velocity -= (speed > topSpeed ? 1 : 0) * normalized(velocity) * acceleration *
-              timeDelta;
+  velocity -= (speed > topSpeed ? 1 : 0) * normalized(velocity) *
+              std::min(acceleration * timeDelta, speed - topSpeed);
   velocity += normalized(target - position) * acceleration * timeDelta / 2;
   position += velocity * timeDelta / 2;
   if (norm(target - position) < 10)
