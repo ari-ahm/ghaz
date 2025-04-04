@@ -6,6 +6,7 @@
 #include <QPen>
 #include <QPointF>
 #include <QVector>
+#include <algorithm>
 #include <cmath>
 #include <qbrush.h>
 #include <qcolor.h>
@@ -80,6 +81,9 @@ void goose::updateRig(float currentTime) {
 }
 
 void goose::solveFeet(float currentTime) {
+  while (!mudPath.empty() && mudPath.front().time + 10 < currentTime)
+    mudPath.pop_front();
+
   QPointF lfootTarget = position + normal(direction - M_PI_2) * 3;
   QPointF rfootTarget = position + normal(direction + M_PI_2) * 3;
 
@@ -101,6 +105,8 @@ void goose::solveFeet(float currentTime) {
     if (currentTime > gooseRig.lFootTime + stepTime) {
       gooseRig.lFootPos = diff;
       gooseRig.lFootTime = -1;
+      if (currentTime - muddyFeetTime < 15)
+        mudPath.push_back({diff, currentTime});
     } else {
       gooseRig.lFootPos =
           lerp(gooseRig.lFootOrig, diff,
@@ -111,6 +117,8 @@ void goose::solveFeet(float currentTime) {
     if (currentTime > gooseRig.rFootTime + stepTime) {
       gooseRig.rFootPos = diff;
       gooseRig.rFootTime = -1;
+      if (currentTime - muddyFeetTime < 15)
+        mudPath.push_back({diff, currentTime});
     } else {
       gooseRig.rFootPos =
           lerp(gooseRig.rFootOrig, diff,
@@ -119,7 +127,8 @@ void goose::solveFeet(float currentTime) {
   }
 }
 
-void goose::drawRig(QPainter *painter) {
+void goose::drawRig(QPainter *painter, float currentTime) {
+
   auto multiplyScalar = [](const QPointF &pt, float scalar) -> QPointF {
     return QPointF(pt.x() * scalar, pt.y() * scalar);
   };
@@ -138,6 +147,14 @@ void goose::drawRig(QPainter *painter) {
   QBrush brushGooseWhite(Qt::white);
   QBrush brushGooseOrange(QColor(255, 165, 0));
   QColor gooseOutlineColor(QColor(211, 211, 211));
+  QBrush brushMudStain(QColor(139, 69, 19));
+
+  for (mudStain i : mudPath) {
+    float p = currentTime - i.time - 9;
+    p = std::max(0.f, p);
+    p = std::min(1.f, p);
+    fillCircleFromCenter(painter, brushMudStain, i.position, lerp(3, 0, p));
+  }
 
   QPen pen = drawingPen;
   pen.setColor(brushGooseWhite.color());
@@ -264,9 +281,11 @@ float goose::getTopSpeed() { return topSpeed; }
 bool goose::draw(QPainter *painter, float currentTime) {
   updatePos(currentTime);
   updateRig(currentTime);
-  drawRig(painter);
+  drawRig(painter, currentTime);
 
   return false;
 }
 
 QPointF goose::getBeakPos() { return gooseRig.head2EndPoint; }
+
+void goose::setMuddyFeet(float currentTime) { muddyFeetTime = currentTime; }

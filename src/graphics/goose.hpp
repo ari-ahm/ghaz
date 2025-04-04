@@ -3,8 +3,10 @@
 
 #include "graphics/graphic.hpp"
 #include <QWidget>
+#include <qcontainerfwd.h>
 #include <qpainter.h>
 #include <qpoint.h>
+#include <queue>
 #include <qvectornd.h>
 
 class goose : public graphic {
@@ -18,6 +20,7 @@ public:
   QPointF getPosition();
   float getTopSpeed();
   QPointF getBeakPos();
+  void setMuddyFeet(float currentTime);
 
 private:
   struct GooseRig {
@@ -35,6 +38,11 @@ private:
     QPointF lFootDir, rFootDir;
   };
 
+  struct mudStain {
+    QPointF position;
+    float time;
+  };
+
   float stepTime;
 
   QImage shadowBitmap;
@@ -49,9 +57,11 @@ private:
   GooseRig gooseRig;
   speedTier speed;
   bool extendingNeck = false;
+  float muddyFeetTime = -1e3;
+  std::deque<mudStain> mudPath;
 
   void updateRig(float currentTime);
-  void drawRig(QPainter *painter);
+  void drawRig(QPainter *painter, float currentTime);
   void updatePos(float currentTime);
   void solveFeet(float currentTime);
 };

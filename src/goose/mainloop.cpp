@@ -1,8 +1,8 @@
 #include "mainloop.hpp"
 #include "graphics/goose.hpp"
 #include "graphics/graphic.hpp"
+#include "tasks/mudTrack.hpp"
 #include "tasks/nabMouse.hpp"
-#include "tasks/runOffscreen.hpp"
 #include "tasks/wander.hpp"
 #include <GL/gl.h>
 #include <QScreen>
@@ -19,6 +19,7 @@ mainloop::mainloop(QWidget *parent) : QOpenGLWidget(parent) {
 
   myTaskdb.addTask([this]() { return new wander(this); });
   myTaskdb.addTask([this]() { return new nabMouse(this); });
+  myTaskdb.addTask([this]() { return new mudTrack(this); });
 
   int h = this->screen()->size().height();
   int w = this->screen()->size().width();
