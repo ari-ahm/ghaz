@@ -23,7 +23,7 @@ mainloop::mainloop(QWidget *parent) : QOpenGLWidget(parent) {
   setAttribute(Qt::WA_OpaquePaintEvent, false);
   setAttribute(Qt::WA_TranslucentBackground, true);
   setAttribute(Qt::WA_TransparentForMouseEvents, true);
-  setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+  setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
   /*setWindowState(Qt::WindowFullScreen);*/
 
   setFixedHeight(h);

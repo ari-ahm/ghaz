@@ -80,8 +80,8 @@ void goose::updateRig(float currentTime) {
 }
 
 void goose::solveFeet(float currentTime) {
-  QPointF lfootTarget = position;
-  QPointF rfootTarget = position + normal(direction + M_PI_2) * 6;
+  QPointF lfootTarget = position + normal(direction - M_PI_2) * 3;
+  QPointF rfootTarget = position + normal(direction + M_PI_2) * 3;
 
   if (gooseRig.lFootTime < 0 && gooseRig.rFootTime < 0) {
     float lfootDist = norm(gooseRig.lFootPos - lfootTarget);
