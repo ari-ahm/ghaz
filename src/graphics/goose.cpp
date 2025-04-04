@@ -231,17 +231,19 @@ void goose::drawRig(QPainter *painter, float currentTime) {
 void goose::updatePos(float currentTime) {
   float timeDelta = currentTime - lastUpdate;
   lastUpdate = currentTime;
+  float speed = norm(velocity);
+  velocity -= (speed > topSpeed ? 1 : 0) * normalized(velocity) * acceleration *
+              timeDelta;
+  velocity += normalized(target - position) * acceleration * timeDelta / 2;
+  position += velocity * timeDelta / 2;
+  if (norm(target - position) < 10)
+    return;
   float targetAngle = angle(target - position);
   if (abs(direction - targetAngle) > abs(direction - targetAngle - 2 * M_PI))
     direction -= 2 * M_PI;
   if (abs(direction - targetAngle) > abs(direction - targetAngle + 2 * M_PI))
     direction += 2 * M_PI;
   direction = lerp(direction, angle(target - position), 0.25);
-  float speed = norm(velocity);
-  velocity -= (speed > topSpeed ? 1 : 0) * normalized(velocity) * acceleration *
-              timeDelta;
-  velocity += normalized(target - position) * acceleration * timeDelta / 2;
-  position += velocity * timeDelta / 2;
 }
 
 void goose::setSpeed(speedTier tier) {

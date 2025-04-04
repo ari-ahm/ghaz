@@ -11,6 +11,7 @@
 #include <qlogging.h>
 #include <qnamespace.h>
 #include <qpoint.h>
+#include <qregion.h>
 #include <qset.h>
 
 mainloop::mainloop(QWidget *parent) : QOpenGLWidget(parent) {
@@ -26,7 +27,7 @@ mainloop::mainloop(QWidget *parent) : QOpenGLWidget(parent) {
 
   setAttribute(Qt::WA_OpaquePaintEvent, false);
   setAttribute(Qt::WA_TranslucentBackground, true);
-  setAttribute(Qt::WA_TransparentForMouseEvents, true);
+  // setAttribute(Qt::WA_TransparentForMouseEvents, true);
   setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
   /*setWindowState(Qt::WindowFullScreen);*/
 
@@ -54,7 +55,14 @@ graphic *mainloop::getGraphic(std::string name) { return namedGraphics[name]; }
 
 void mainloop::paintGL() {
   glClear(GL_COLOR_BUFFER_BIT);
+
+  // TODO add nabMouse on click
+  // QPointF pos = dynamic_cast<goose *>(getGraphic("goose"))->getPosition();
+  // QRegion circleRegion(pos.x() - 50, pos.y() - 50, 100, 100,
+  // QRegion::Ellipse); setMask(circleRegion);
+
   QPainter painter(this);
+  painter.setRenderHint(QPainter::Antialiasing);
 
   // painter.fillRect(rect(), Qt::black);
 

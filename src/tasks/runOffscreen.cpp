@@ -15,5 +15,5 @@ bool runOffscreen::tick(float currentTime) {
 }
 
 QPointF runOffscreen::getTarget() {
-  return {random(100) > 50 ? -50. : ml->width() + 50., random(ml->height())};
+  return {random(100) > 100 ? -100. : ml->width() + 50., random(ml->height())};
 }
